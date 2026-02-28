@@ -44,7 +44,7 @@ M.ingame = {
   -- Heat telemetry mode:
   -- "model"  -> deterministic internal model (default, no tower adapter needed)
   -- "sensor" -> read live heat from a configured adapter/peripheral component
-  heat_mode = "model", -- "model" | "sensor"
+  heat_mode = "sensor", -- "model" | "sensor"
 
   transposer = {
     -- Fill either address OR component_type.
@@ -68,12 +68,13 @@ M.ingame = {
   controller_sensor = {
     -- Used only when heat_mode == "sensor".
     -- Point this at the adapter/peripheral that can read tower heat.
-    enable = false,
+    enable = true,
     strict = true,
 
     -- Fill either address OR component_type.
+    -- Prefer address if multiple gt_machine components exist.
     address = nil,
-    component_type = nil,
+    component_type = "gt_machine",
 
     -- Optional direct methods (preferred if available).
     read_heat_method = "readHeat",

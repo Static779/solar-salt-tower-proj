@@ -36,6 +36,10 @@
 - Added optional live-heat telemetry mode in `config.lua` and `providers/ingame_model.lua`:
   - `ingame.heat_mode = "sensor"` with `ingame.controller_sensor.*` method mapping.
   - keeps fail-safe behavior when live telemetry is missing/invalid.
+- Updated default `config.lua` telemetry profile to target GregTech OC machine components:
+  - `ingame.heat_mode = "sensor"`
+  - `ingame.controller_sensor.enable = true`
+  - `ingame.controller_sensor.component_type = "gt_machine"`
 
 ## 2026-02-27
 
