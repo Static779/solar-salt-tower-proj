@@ -73,6 +73,7 @@ Edit [config.lua](/c:/Users/amirw/OneDrive/Desktop/solar%20salt%20tower%20proj/o
 M.ingame.enable = true
 M.ingame.initial_heat = 100000
 M.ingame.valve_mode = "transposer_exact"
+M.ingame.heat_mode = "model"         -- default stable mode
 
 M.ingame.transposer.component_type = "transposer"
 M.ingame.transposer.source_side = "west"  -- cold source side
@@ -89,6 +90,13 @@ M.safety.enforce_reflector_count = true
 M.safety.expected_reflector_count = 340
 M.safety.max_insert_per_cycle = 60000
 ```
+
+Optional live-heat mode (adapter/peripheral):
+- Set `M.ingame.heat_mode = "sensor"`.
+- Configure `M.ingame.controller_sensor` with adapter address/type and method names.
+- Keep `strict = true` so controller fails safe if heat telemetry breaks.
+- Use this helper to discover adapter methods:
+  - `lua /home/lib/solar_tower/inspect_component.lua <address_or_type>`
 
 If you are not wiring a daylight sensor:
 - Keep `redstone` unset or ignore it.

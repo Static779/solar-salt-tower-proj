@@ -9,6 +9,9 @@ This controller keeps GTNH Solar Tower heat at `50,000` for max sustained hot so
 - `main.lua`: entrypoint
 - `sim_test.lua`: offline behavior tests
 - `discover.lua`: in-game component/method discovery helper
+- `inspect_component.lua`: print callable methods for one component (adapter mapping helper)
+- `install.lua`: raw GitHub installer
+- `bootstrap.lua`: one-file installer bootstrap for this repo
 - `DEPLOYMENT_TRANSPOSER.md`: strict in-game deployment runbook (recommended)
 
 ## State machine
@@ -38,6 +41,10 @@ This controller keeps GTNH Solar Tower heat at `50,000` for max sustained hot so
 ## In-game modes
 Set `ingame.enable = true` in `config.lua`.
 
+Heat source mode:
+- `ingame.heat_mode = "model"`: deterministic internal heat model.
+- `ingame.heat_mode = "sensor"`: reads live controller heat from adapter/peripheral methods.
+
 ### Mode A: `transposer_exact` (recommended)
 Uses OC `transposer.transferFluid(source, sink, count[, sourceTank])` for exact liters per cycle.
 
@@ -51,6 +58,13 @@ Config keys:
 - `ingame.transposer.source_side`
 - `ingame.transposer.sink_side`
 - optional `ingame.transposer.source_tank`
+
+Live heat option (adapter/peripheral):
+- Set `ingame.heat_mode = "sensor"`.
+- Configure `ingame.controller_sensor.*`:
+  - `address` or `component_type`
+  - `read_heat_method` and optional `read_reflector_count_method`
+  - fallback `sensor_info_method` if heat comes as text lines.
 
 ### Mode B: `sfm_pulse`
 Uses OC redstone pulses to trigger SFM; each pulse must move a fixed amount.
@@ -131,6 +145,7 @@ From OC shell:
 - `lua /home/lib/solar_tower/main.lua`
 - Optional preflight:
   - `lua /home/lib/solar_tower/discover.lua`
+  - `lua /home/lib/solar_tower/inspect_component.lua <address_or_type>`
 
 ## Local emulator (offline)
 - Files:

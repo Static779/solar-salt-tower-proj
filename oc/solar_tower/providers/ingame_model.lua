@@ -42,6 +42,112 @@ local function clamp_integer(value, min_value, max_value)
   return value
 end
 
+local function parse_integer_deep(value, seen)
+  local t = type(value)
+  if t == "number" then
+    return math.floor(value)
+  end
+  if t == "string" then
+    local n = value:match("-?%d+")
+    if n ~= nil then
+      return tonumber(n)
+    end
+    return nil
+  end
+  if t == "table" then
+    seen = seen or {}
+    if seen[value] then
+      return nil
+    end
+    seen[value] = true
+
+    for _, v in ipairs(value) do
+      local parsed = parse_integer_deep(v, seen)
+      if parsed ~= nil then
+        return parsed
+      end
+    end
+    for _, v in pairs(value) do
+      local parsed = parse_integer_deep(v, seen)
+      if parsed ~= nil then
+        return parsed
+      end
+    end
+  end
+  return nil
+end
+
+local function parse_integer_from_results(...)
+  local n = select("#", ...)
+  for i = 1, n do
+    local parsed = parse_integer_deep(select(i, ...))
+    if parsed ~= nil then
+      return parsed
+    end
+  end
+  return nil
+end
+
+local function strip_format_codes(s)
+  -- Strip Minecraft formatting code pairs such as §a or §7.
+  local out = s:gsub("§.", "")
+  return out
+end
+
+local function collect_strings(value, out, seen)
+  local t = type(value)
+  if t == "string" then
+    out[#out + 1] = value
+    return
+  end
+  if t ~= "table" then
+    return
+  end
+
+  seen = seen or {}
+  if seen[value] then
+    return
+  end
+  seen[value] = true
+
+  for _, v in ipairs(value) do
+    collect_strings(v, out, seen)
+  end
+  for _, v in pairs(value) do
+    collect_strings(v, out, seen)
+  end
+end
+
+local function parse_heat_from_text_lines(lines)
+  for i = 1, #lines do
+    local line = strip_format_codes(lines[i])
+    local exact = line:match("[Ii]nternal%s*[Hh]eat%s*[Ll]evel:%s*(-?%d+)")
+    if exact ~= nil then
+      return tonumber(exact)
+    end
+    local loose = line:match("[Hh]eat:%s*(-?%d+)")
+    if loose ~= nil then
+      return tonumber(loose)
+    end
+  end
+  return nil
+end
+
+local function parse_reflectors_from_text_lines(lines)
+  for i = 1, #lines do
+    local line = strip_format_codes(lines[i])
+    local exact = line:match("[Cc]onnected%s*[Ss]olar%s*[Rr]eflectors:%s*(%d+)")
+    if exact ~= nil then
+      return tonumber(exact)
+    end
+    local loose = line:match("[Rr]eflectors:%s*(%d+)")
+    if loose ~= nil then
+      return tonumber(loose)
+    end
+  end
+  return nil
+end
+
 local function parse_side(value)
   if type(value) == "number" then
     local side = math.floor(value)
@@ -209,14 +315,19 @@ function M.build(config)
   local safety = config.safety or {}
   local ingame = config.ingame or {}
   local valve_mode = tostring(ingame.valve_mode or "transposer_exact"):lower()
+  local heat_mode = tostring(ingame.heat_mode or "model"):lower()
   if valve_mode ~= "transposer_exact" and valve_mode ~= "sfm_pulse" then
     return nil, "invalid ingame.valve_mode (expected transposer_exact or sfm_pulse)"
+  end
+  if heat_mode ~= "model" and heat_mode ~= "sensor" then
+    return nil, "invalid ingame.heat_mode (expected model or sensor)"
   end
 
   local redstone_cfg = ingame.redstone or {}
   local transposer_cfg = ingame.transposer or {}
   local hot_cfg = ingame.hot_salt_monitor or {}
   local sfm_cfg = ingame.sfm or {}
+  local sensor_cfg = ingame.controller_sensor or {}
 
   local geolyzer, geolyzer_err = resolve_component(component, ingame.geolyzer, "geolyzer", true)
   if geolyzer == nil then
@@ -224,6 +335,17 @@ function M.build(config)
   end
   if type(geolyzer.isSunVisible) ~= "function" then
     return nil, "geolyzer is missing isSunVisible()"
+  end
+
+  local sensor_proxy = nil
+  local sensor_enabled = heat_mode == "sensor" or sensor_cfg.enable == true
+  if sensor_enabled then
+    local sensor_required = sensor_cfg.strict ~= false
+    local sensor_err
+    sensor_proxy, sensor_err = resolve_component(component, sensor_cfg, nil, sensor_required)
+    if sensor_proxy == nil and sensor_required then
+      return nil, "controller sensor unavailable: " .. tostring(sensor_err)
+    end
   end
 
   local transposer = nil
@@ -364,6 +486,96 @@ function M.build(config)
     sfm_carry_liters = 0,
   }
 
+  local function try_call(proxy, method_name, ...)
+    if proxy == nil then
+      return false, "missing proxy"
+    end
+    if type(method_name) ~= "string" or method_name == "" then
+      return false, "missing method name"
+    end
+    local fn = proxy[method_name]
+    if type(fn) ~= "function" then
+      return false, "missing method: " .. tostring(method_name)
+    end
+    return pcall(fn, ...)
+  end
+
+  local function parse_metric_from_payload(kind, ...)
+    local strings = {}
+    for i = 1, select("#", ...) do
+      collect_strings(select(i, ...), strings)
+    end
+
+    if kind == "heat" then
+      local parsed = parse_heat_from_text_lines(strings)
+      if parsed ~= nil then
+        return math.floor(parsed)
+      end
+    elseif kind == "reflectors" then
+      local parsed = parse_reflectors_from_text_lines(strings)
+      if parsed ~= nil then
+        return math.floor(parsed)
+      end
+    end
+
+    return nil
+  end
+
+  local sensor_read_heat_method = tostring(sensor_cfg.read_heat_method or "readHeat")
+  local sensor_read_reflector_method = tostring(sensor_cfg.read_reflector_count_method or "readReflectorCount")
+  local sensor_info_method = tostring(sensor_cfg.sensor_info_method or "getSensorInformation")
+
+  local function read_live_heat_from_sensor()
+    if not sensor_enabled then
+      return nil, "sensor mode disabled"
+    end
+    if sensor_proxy == nil then
+      return nil, "no controller sensor component"
+    end
+
+    local ok_direct, a, b, c, d = try_call(sensor_proxy, sensor_read_heat_method)
+    if ok_direct then
+      local direct = parse_integer_from_results(a, b, c, d)
+      if direct ~= nil then
+        return direct
+      end
+    end
+
+    local ok_info, ia, ib, ic, idv = try_call(sensor_proxy, sensor_info_method)
+    if ok_info then
+      local parsed = parse_metric_from_payload("heat", ia, ib, ic, idv)
+      if parsed ~= nil then
+        return parsed
+      end
+    end
+
+    return nil, "unable to read live heat from controller sensor"
+  end
+
+  local function read_live_reflectors_from_sensor()
+    if not sensor_enabled or sensor_proxy == nil then
+      return nil
+    end
+
+    local ok_direct, a, b, c, d = try_call(sensor_proxy, sensor_read_reflector_method)
+    if ok_direct then
+      local direct = parse_integer_from_results(a, b, c, d)
+      if direct ~= nil then
+        return direct
+      end
+    end
+
+    local ok_info, ia, ib, ic, idv = try_call(sensor_proxy, sensor_info_method)
+    if ok_info then
+      local parsed = parse_metric_from_payload("reflectors", ia, ib, ic, idv)
+      if parsed ~= nil then
+        return parsed
+      end
+    end
+
+    return nil
+  end
+
   local function clear_weather_cache()
     state.cached_day = nil
     state.cached_rain = nil
@@ -433,6 +645,15 @@ function M.build(config)
   local providers = {}
 
   function providers.read_heat()
+    if heat_mode == "sensor" then
+      local live_heat, live_err = read_live_heat_from_sensor()
+      if live_heat == nil then
+        return nil, live_err
+      end
+      state.heat = live_heat
+      return live_heat
+    end
+
     local heat, err = advance_model()
     if heat == nil then
       return nil, err
@@ -441,6 +662,12 @@ function M.build(config)
   end
 
   function providers.read_reflector_count()
+    if heat_mode == "sensor" then
+      local live_reflectors = read_live_reflectors_from_sensor()
+      if live_reflectors ~= nil then
+        return live_reflectors
+      end
+    end
     return to_integer(safety.expected_reflector_count) or 340
   end
 

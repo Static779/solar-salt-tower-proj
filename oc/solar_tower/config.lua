@@ -41,6 +41,11 @@ M.ingame = {
   initial_heat = 100000,
   valve_mode = "transposer_exact", -- "transposer_exact" or "sfm_pulse"
 
+  -- Heat telemetry mode:
+  -- "model"  -> deterministic internal model (default, no tower adapter needed)
+  -- "sensor" -> read live heat from a configured adapter/peripheral component
+  heat_mode = "model", -- "model" | "sensor"
+
   transposer = {
     -- Fill either address OR component_type.
     address = nil,
@@ -58,6 +63,27 @@ M.ingame = {
     -- Fill either address OR component_type.
     address = nil,
     component_type = "geolyzer",
+  },
+
+  controller_sensor = {
+    -- Used only when heat_mode == "sensor".
+    -- Point this at the adapter/peripheral that can read tower heat.
+    enable = false,
+    strict = true,
+
+    -- Fill either address OR component_type.
+    address = nil,
+    component_type = nil,
+
+    -- Optional direct methods (preferred if available).
+    read_heat_method = "readHeat",
+    read_reflector_count_method = "readReflectorCount",
+
+    -- Optional text/table telemetry method for fallback parsing.
+    -- Example payload can include:
+    -- "Internal Heat Level: 50000"
+    -- "Connected Solar Reflectors: 340"
+    sensor_info_method = "getSensorInformation",
   },
 
   redstone = {

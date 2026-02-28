@@ -40,3 +40,4 @@ print_component_list("transposer", {
 })
 print_component_list("geolyzer", { "isSunVisible", "canSeeSky", "analyze" })
 print_component_list("redstone", { "getInput", "setOutput", "getOutput" })
+print_component_list("adapter", { "getSensorInformation", "readHeat", "readReflectorCount" })

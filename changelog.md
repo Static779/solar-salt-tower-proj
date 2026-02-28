@@ -16,6 +16,7 @@
 - Added `oc/solar_tower/DEPLOYMENT_TRANSPOSER.md` as the no-ambiguity in-game runbook.
 - Added `oc/solar_tower/install.lua` for OpenComputers raw GitHub installation flow.
 - Added `oc/solar_tower/bootstrap.lua` for one-line OC install bootstrapping with this repo prefilled.
+- Added `oc/solar_tower/inspect_component.lua` for listing callable methods on a specific OC component.
 
 ### Changed
 - `ingame_model.lua` now:
@@ -32,6 +33,9 @@
   - explicit transposer cold-salt transfer method options,
   - clear separation of hot-salt export from control loop,
   - offline emulator usage instructions.
+- Added optional live-heat telemetry mode in `config.lua` and `providers/ingame_model.lua`:
+  - `ingame.heat_mode = "sensor"` with `ingame.controller_sensor.*` method mapping.
+  - keeps fail-safe behavior when live telemetry is missing/invalid.
 
 ## 2026-02-27
 

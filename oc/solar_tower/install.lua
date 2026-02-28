@@ -33,6 +33,8 @@ local files = {
   "io.lua",
   "main.lua",
   "discover.lua",
+  "inspect_component.lua",
+  "bootstrap.lua",
   "README.md",
   "DEPLOYMENT_TRANSPOSER.md",
   "sim_test.lua",
