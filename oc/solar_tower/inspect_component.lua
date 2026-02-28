@@ -53,14 +53,33 @@ io.write("address: " .. tostring(address) .. "\n")
 io.write("type: " .. tostring(ctype) .. "\n")
 
 local methods = {}
-for name, value in pairs(proxy) do
-  if type(value) == "function" then
-    methods[#methods + 1] = name
+
+-- Preferred: OC exposes method metadata per component address.
+if type(component.methods) == "function" then
+  local ok, method_map = pcall(component.methods, address)
+  if ok and type(method_map) == "table" then
+    for name, _ in pairs(method_map) do
+      methods[#methods + 1] = name
+    end
+  end
+end
+
+-- Fallback for environments where methods metadata is unavailable.
+if #methods == 0 then
+  for name, value in pairs(proxy) do
+    if type(value) == "function" then
+      methods[#methods + 1] = name
+    end
   end
 end
 table.sort(methods)
 
 io.write("methods:\n")
-for i = 1, #methods do
-  io.write("  - " .. methods[i] .. "\n")
+if #methods == 0 then
+  io.write("  (none exposed)\n")
+  io.write("hint: verify adapter placement and that this block exports OC callbacks\n")
+else
+  for i = 1, #methods do
+    io.write("  - " .. methods[i] .. "\n")
+  end
 end
