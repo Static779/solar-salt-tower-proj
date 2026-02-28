@@ -15,6 +15,7 @@
   - `oc/solar_tower/emulator/run_transposer_demo.ps1`
 - Added `oc/solar_tower/DEPLOYMENT_TRANSPOSER.md` as the no-ambiguity in-game runbook.
 - Added `oc/solar_tower/install.lua` for OpenComputers raw GitHub installation flow.
+- Added `oc/solar_tower/bootstrap.lua` for one-line OC install bootstrapping with this repo prefilled.
 
 ### Changed
 - `ingame_model.lua` now:

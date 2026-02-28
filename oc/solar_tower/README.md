@@ -153,6 +153,11 @@ lua /home/lib/solar_tower/main.lua
 
 If your default branch is `main`, use `main`. If it is `master`, use `master`.
 
+### One-liner bootstrap (this repo)
+```sh
+wget -f https://raw.githubusercontent.com/Static779/solar-salt-tower-proj/main/oc/solar_tower/bootstrap.lua /tmp/solar_boot.lua; lua /tmp/solar_boot.lua; lua /home/lib/solar_tower/main.lua
+```
+
 ## Offline test
 From repo root:
 - `lua oc/solar_tower/sim_test.lua`
