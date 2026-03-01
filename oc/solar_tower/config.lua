@@ -37,7 +37,7 @@ M.logging = {
 -- 4) optional redstone daylight sensor input
 -- 5) model-based heat state seeded from initial_heat
 M.ingame = {
-  enable = false,
+  enable = true,
   initial_heat = 100000,
   valve_mode = "transposer_exact", -- "transposer_exact" or "sfm_pulse"
 
