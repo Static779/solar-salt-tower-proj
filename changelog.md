@@ -40,6 +40,7 @@
   - `ingame.heat_mode = "sensor"`
   - `ingame.controller_sensor.enable = true`
   - `ingame.controller_sensor.component_type = "gt_machine"`
+- Updated `main.lua` module path setup so OpenOS always loads `solar_tower` modules from the script's own install location, avoiding cross-folder config/module mismatches.
 
 ## 2026-02-27
 
