@@ -73,8 +73,8 @@ M.ingame = {
 
     -- Fill either address OR component_type.
     -- Prefer address if multiple gt_machine components exist.
-    address = nil,
-    component_type = "gt_machine",
+    address = "1c567e0f-3c93-4368-b597-570799b3ca7c",
+    component_type = nil,
 
     -- Optional direct methods (preferred if available).
     read_heat_method = "readHeat",
